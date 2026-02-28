@@ -1,0 +1,2 @@
+# ClarityCart
+ClarityCart AI
