@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClarityCart</title>
+  <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-row">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="8" fill="url(#grad1)" />
+            <path d="M8 10h12l-1.5 8H9.5L8 10z" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <circle cx="11" cy="21" r="1.5" fill="#fff" />
+            <circle cx="17" cy="21" r="1.5" fill="#fff" />
+            <path d="M6 8l2 2" stroke="#fff" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M14 6v3" stroke="#FFD700" stroke-width="2" stroke-linecap="round" />
+            <path d="M11 7l1 2" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M17 7l-1 2" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round" />
+            <defs>
+              <linearGradient id="grad1" x1="0" y1="0" x2="28" y2="28">
+                <stop offset="0%" stop-color="#6C3AED" />
+                <stop offset="100%" stop-color="#2563EB" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div>
+          <h1 class="logo-text">ClarityCart</h1>
+          <p class="tagline">AI Shopping Assistant</p>
+        </div>
+      </div>
+      <div class="status-indicator" id="statusDot" title="Checking backend...">
+        <span class="dot checking"></span>
+        <span class="status-text" id="statusText">Connecting...</span>
+      </div>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section">
+      <div class="input-group">
+        <label for="queryInput" class="input-label">What are you looking for?</label>
+        <div class="input-wrapper">
+          <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input type="text" id="queryInput" placeholder="e.g., best wireless earbuds under 2000" autocomplete="off"
+            spellcheck="false" />
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <div class="control-item">
+          <label for="limitSelect" class="control-label">Products to scan</label>
+          <select id="limitSelect">
+            <option value="15">15 products</option>
+            <option value="30" selected>30 products</option>
+            <option value="50">50 products</option>
+            <option value="80">80 products</option>
+            <option value="100">100 products</option>
+          </select>
+        </div>
+        <div class="control-item">
+          <label class="control-label">Reddit check</label>
+          <label class="toggle" for="redditToggle">
+            <input type="checkbox" id="redditToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <button id="analyzeBtn" class="analyze-btn" disabled>
+        <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2">
+          <path
+            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+        <span>Analyze Products</span>
+      </button>
+    </section>
+
+    <!-- Loading State -->
+    <section class="loading-section" id="loadingSection" style="display:none;">
+      <div class="loader">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+      </div>
+      <p class="loading-text" id="loadingText">Scraping Amazon products...</p>
+      <div class="loading-steps">
+        <div class="step" id="stepScrape"><span class="step-dot"></span> Scraping products</div>
+        <div class="step" id="stepScore"><span class="step-dot"></span> Scoring & ranking</div>
+        <div class="step" id="stepExplain"><span class="step-dot"></span> Generating explanation</div>
+        <div class="step" id="stepReddit" style="display:none;"><span class="step-dot"></span> Reddit sentiment check
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="resultsSection" style="display:none;">
+      <!-- Top Product Card -->
+      <div class="result-card" id="topProductCard">
+        <div class="card-badge">🏆 Best Pick</div>
+        <h2 class="product-title" id="productTitle"></h2>
+        <div class="product-meta">
+          <div class="meta-chip price-chip">
+            <span class="meta-label">Price</span>
+            <span class="meta-value" id="productPrice"></span>
+          </div>
+          <div class="meta-chip rating-chip">
+            <span class="meta-label">Rating</span>
+            <span class="meta-value" id="productRating"></span>
+          </div>
+          <div class="meta-chip reviews-chip">
+            <span class="meta-label">Reviews</span>
+            <span class="meta-value" id="productReviews"></span>
+          </div>
+          <div class="meta-chip score-chip">
+            <span class="meta-label">Score</span>
+            <span class="meta-value" id="productScore"></span>
+          </div>
+        </div>
+
+        <div class="offers-row" id="offersRow" style="display:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
+            <path d="M9 12l2 2 4-4" />
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+          <span id="productOffers"></span>
+        </div>
+
+        <div class="sponsored-badge" id="sponsoredBadge" style="display:none;">
+          ⚠ Sponsored listing (score penalized)
+        </div>
+
+        <!-- Why This Product -->
+        <div class="explanation-box">
+          <h3 class="explanation-title">💡 Why this product?</h3>
+          <div class="explanation-text" id="explanationText"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-row">
+          <a href="#" id="viewOnFlipkart" class="action-btn primary-btn" target="_blank" rel="noopener">
+            View on Amazon
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+            </svg>
+          </a>
+          <button id="buyBtn" class="action-btn buy-btn">
+            🛒 Add to Cart
+          </button>
+        </div>
+      </div>
+
+      <!-- Reddit Sentiment Card -->
+      <div class="sentiment-card" id="sentimentCard" style="display:none;">
+        <h3 class="sentiment-title">📊 Reddit Sentiment</h3>
+        <div class="sentiment-overview">
+          <div class="sentiment-badge" id="sentimentBadge">Loading...</div>
+          <span class="sentiment-count" id="sentimentCount"></span>
+        </div>
+        <div class="sentiment-details">
+          <div class="sentiment-col">
+            <h4 class="col-title praise-title">👍 Common Praise</h4>
+            <ul class="theme-list" id="praiseList"></ul>
+          </div>
+          <div class="sentiment-col">
+            <h4 class="col-title complaint-title">👎 Common Complaints</h4>
+            <ul class="theme-list" id="complaintList"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 5 Products -->
+      <div class="top5-section">
+        <h3 class="top5-title">🔝 Top 5 Ranked Products</h3>
+        <div class="top5-list" id="top5List"></div>
+      </div>
+
+      <!-- Scan Again -->
+      <button id="resetBtn" class="reset-btn">
+        ↻ New Search
+      </button>
+    </section>
+
+    <!-- Error State -->
+    <section class="error-section" id="errorSection" style="display:none;">
+      <div class="error-icon">⚠</div>
+      <p class="error-text" id="errorText"></p>
+      <button id="retryBtn" class="retry-btn">Try Again</button>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>ClarityCart v1.0 • 100% Local • No Paid APIs</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>
