@@ -18,12 +18,13 @@ from pydantic import BaseModel, Field
 
 from scraper.amazon_scraper import scrape_amazon
 from scoring.engine import score_products
-from llm.explainer import explain_product, check_ollama_health
+from llm.explainer import explain_and_select_product, check_ollama_health
 from sentiment.reddit import analyze_reddit_sentiment
+from sentiment.web import analyze_web_sentiment
 from automation.order import add_to_cart
 from config import DEFAULT_PRODUCT_LIMIT, MAX_PRODUCT_LIMIT, PORT, HOST
 
-# ── Logging ──────────────────────────────────────────────
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s │ %(name)-25s │ %(levelname)-7s │ %(message)s",
@@ -32,7 +33,7 @@ logging.basicConfig(
 logger = logging.getLogger("claritycart")
 
 
-# ── Lifespan ─────────────────────────────────────────────
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🛒 ClarityCart backend starting...")
@@ -45,7 +46,7 @@ async def lifespan(app: FastAPI):
     logger.info("ClarityCart backend shutting down")
 
 
-# ── App ──────────────────────────────────────────────────
+
 app = FastAPI(
     title="ClarityCart API",
     description="AI-powered Flipkart shopping assistant backend",
@@ -55,14 +56,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Chrome extension will connect from chrome-extension:// origin
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ── Request / Response Models ────────────────────────────
+
 class AnalyzeRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=200, description="Natural language product query")
     product_limit: int = Field(DEFAULT_PRODUCT_LIMIT, ge=5, le=MAX_PRODUCT_LIMIT)
@@ -86,7 +87,9 @@ class AnalyzeResponse(BaseModel):
     total_scraped: int
     top_product: Optional[ProductResponse]
     explanation: str
+    review_summary: str = ""
     reddit_sentiment: Optional[dict] = None
+    web_sentiment: Optional[dict] = None
     top_5: list[ProductResponse] = []
     error: Optional[str] = None
 
@@ -102,7 +105,7 @@ class OrderResponse(BaseModel):
     cart_url: str = ""
 
 
-# ── Endpoints ────────────────────────────────────────────
+
 @app.get("/health")
 async def health_check():
     ollama_ok = await check_ollama_health()
@@ -135,6 +138,7 @@ async def analyze(request: AnalyzeRequest):
             total_scraped=0,
             top_product=None,
             explanation="",
+            review_summary="",
             error=f"Scraping failed: {str(e)}",
         )
 
@@ -145,6 +149,7 @@ async def analyze(request: AnalyzeRequest):
             total_scraped=0,
             top_product=None,
             explanation="",
+            review_summary="",
             error="No products found. Try a different search query.",
         )
 
@@ -155,18 +160,34 @@ async def analyze(request: AnalyzeRequest):
     top = scored[0]
     top_5 = scored[:5]
 
-    # Step 3: LLM Explanation (async)
-    # Step 4: Reddit Sentiment (async, conditional)
-    tasks = [explain_product(top)]
+    # Step 3: LLM Explanation & Selection (async)
+    # Step 4: Reddit & Web Sentiment (async, conditional)
+    tasks = [explain_and_select_product(request.query, top_5)]
+    
     if request.reddit_check:
-        tasks.append(analyze_reddit_sentiment(top["title"]))
-
+        tasks.append(analyze_reddit_sentiment(top_5[0]["title"])) # Use top scored default for sentiment search while LLM thinks
+        tasks.append(analyze_web_sentiment(top_5[0]["title"]))
+        
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    explanation = results[0] if isinstance(results[0], str) else "Explanation unavailable."
+    best_index = 0
+    explanation = "Explanation unavailable."
+    review_summary = ""
     reddit_sentiment = None
-    if request.reddit_check and len(results) > 1:
+    web_sentiment = None
+
+    llm_res = results[0]
+    if not isinstance(llm_res, Exception) and len(llm_res) == 3:
+        best_index, explanation, review_summary = llm_res
+    else:
+        logger.error(f"LLM task failed or returned unexpected format: {llm_res}")
+
+    if request.reddit_check and len(results) > 2:
         reddit_sentiment = results[1] if isinstance(results[1], dict) else None
+        web_sentiment = results[2] if isinstance(results[2], dict) else None
+
+    # Re-assign top based on LLM's selection
+    top = top_5[best_index] if best_index < len(top_5) else top_5[0]
 
     # Build response
     top_product = ProductResponse(
@@ -200,7 +221,9 @@ async def analyze(request: AnalyzeRequest):
         total_scraped=len(products),
         top_product=top_product,
         explanation=explanation,
+        review_summary=review_summary,
         reddit_sentiment=reddit_sentiment,
+        web_sentiment=web_sentiment,
         top_5=top_5_response,
     )
 
@@ -216,7 +239,7 @@ async def order(request: OrderRequest):
     return OrderResponse(**result)
 
 
-# ── Run ──────────────────────────────────────────────────
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host=HOST, port=PORT, reload=True)

@@ -42,12 +42,20 @@ const productOffers = document.getElementById("productOffers");
 const offersRow = document.getElementById("offersRow");
 const sponsoredBadge = document.getElementById("sponsoredBadge");
 const explanationText = document.getElementById("explanationText");
+const reviewSummaryText = document.getElementById("reviewSummaryText");
 const viewOnAmazon = document.getElementById("viewOnFlipkart"); // The HTML id is still viewOnFlipkart, we just updated the visible text there, but let's change the JS variable for consistency/correctness. Wait, if I change the JS variable I have to change it below. No, I'll keep the JS variable name the same for simplicity unless I want to change both. Let's change the JS variable name to `viewOnAmazon` AND update the `getElementById` to `viewOnAmazon`. I will also need to update the HTML ID.
 const sentimentCard = document.getElementById("sentimentCard");
 const sentimentBadge = document.getElementById("sentimentBadge");
 const sentimentCount = document.getElementById("sentimentCount");
 const praiseList = document.getElementById("praiseList");
 const complaintList = document.getElementById("complaintList");
+
+const webSentimentCard = document.getElementById("webSentimentCard");
+const webSentimentBadge = document.getElementById("webSentimentBadge");
+const webSentimentCount = document.getElementById("webSentimentCount");
+const webPraiseList = document.getElementById("webPraiseList");
+const webComplaintList = document.getElementById("webComplaintList");
+
 const top5List = document.getElementById("top5List");
 
 // State
@@ -121,7 +129,7 @@ async function analyze() {
 
   if (withReddit) {
     stepTimers.push(setTimeout(() => {
-      loadingText.textContent = "Checking Reddit sentiment...";
+      loadingText.textContent = "Running background checks...";
       advanceStep(stepExplain, stepReddit);
     }, 12000));
   }
@@ -190,7 +198,15 @@ function renderResults(data) {
   sponsoredBadge.style.display = top.sponsored ? "block" : "none";
 
   // Explanation
-  explanationText.textContent = data.explanation || "Explanation unavailable.";
+  explanationText.innerHTML = (data.explanation || "Explanation unavailable.").replace(/\n/g, '<br/>');
+
+  // Review Summary
+  if (data.review_summary) {
+    reviewSummaryText.innerHTML = data.review_summary.replace(/\n/g, '<br/>');
+    reviewSummaryText.parentElement.style.display = "block";
+  } else {
+    reviewSummaryText.parentElement.style.display = "none";
+  }
 
   // Amazon link
   currentProductUrl = top.url || "";
@@ -203,6 +219,14 @@ function renderResults(data) {
     sentimentCard.style.display = "block";
   } else {
     sentimentCard.style.display = "none";
+  }
+
+  // Web sentiment
+  if (data.web_sentiment && data.web_sentiment.overall_sentiment !== "Unknown") {
+    renderWebSentiment(data.web_sentiment);
+    webSentimentCard.style.display = "block";
+  } else {
+    webSentimentCard.style.display = "none";
   }
 
   // Top 5
@@ -238,6 +262,35 @@ function renderSentiment(sentiment) {
   });
   if (!sentiment.common_complaints?.length) {
     complaintList.innerHTML = "<li>No specific complaints found</li>";
+  }
+}
+
+function renderWebSentiment(sentiment) {
+  const overall = sentiment.overall_sentiment || "Unknown";
+  webSentimentBadge.textContent = overall;
+  webSentimentBadge.className = `sentiment-badge ${overall.toLowerCase()}`;
+  webSentimentCount.textContent = `Based on web reviews / articles`;
+
+  // Praise
+  webPraiseList.innerHTML = "";
+  (sentiment.common_praise || []).forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    webPraiseList.appendChild(li);
+  });
+  if (!sentiment.common_praise?.length) {
+    webPraiseList.innerHTML = "<li>No specific praise found</li>";
+  }
+
+  // Complaints
+  webComplaintList.innerHTML = "";
+  (sentiment.common_complaints || []).forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    webComplaintList.appendChild(li);
+  });
+  if (!sentiment.common_complaints?.length) {
+    webComplaintList.innerHTML = "<li>No specific complaints found</li>";
   }
 }
 

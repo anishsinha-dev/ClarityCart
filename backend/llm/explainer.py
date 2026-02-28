@@ -1,47 +1,52 @@
-"""
-LLM Explainer — Generates "Why this product?" explanations using local Ollama.
-
-Only called for the TOP-RANKED product after deterministic scoring.
-Never used for re-scoring or re-ranking.
-"""
-
+import json
 import logging
 import httpx
+from textblob import TextBlob
+from typing import Tuple
 
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL, OLLAMA_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
-EXPLAIN_PROMPT_TEMPLATE = """You are a smart shopping assistant. Based on the product data below, explain in exactly 3 concise bullet points why this product is the best pick. Be factual. Reference the rating, number of reviews, price, and value. Do NOT re-rank or re-score. Keep it simple — the user is non-technical.
+EXPLAIN_PROMPT_TEMPLATE = """You are an expert, highly intelligent shopping assistant.
+A user asked for the following: "{user_query}"
 
-Product:
-- Title: {title}
-- Price: ₹{price}
-- Rating: {rating}/5
-- Reviews: {review_count}
-- Offers: {offers}
-- Sponsored: {sponsored}
+Below are the top 5 products retrieved for this query. Your job is to:
+1. Identify the SINGLE BEST product out of these 5 that perfectly matches the user's specific request (e.g. if they asked for a "laptop for video editing", pick the one with the best dedicated GPU; if they asked for "good selfie camera", pick the phone known for high MP front camera).
+2. Provide exactly 3 short bullet points explaining WHY it fits their EXACT request. Mention specific features referenced in their prompt whenever possible.
+3. Provide a 1-2 sentence "Review Summary" inferring the general consensus about this product based on its rating and review count.
 
-Respond ONLY with 3 bullet points. No intro sentence. No markdown headers."""
+Products:
+{products_text}
+
+Respond ONLY with valid JSON using this exact schema, and absolutely nothing else (no markdown blocks, no intro text):
+{{
+  "best_index": <integer from 0 to 4>,
+  "explanation": "• point 1\\n• point 2\\n• point 3",
+  "review_summary": "A short summary of what reviews indicate."
+}}"""
 
 
-async def explain_product(product: dict) -> str:
+async def explain_and_select_product(user_query: str, top_5_products: list[dict]) -> Tuple[int, str, str]:
     """
-    Generate a 3-bullet explanation for why this product is the top pick.
+    Use local LLM to select the best product from the top 5 based on the user's prompt,
+    and generate a tailored explanation and review summary.
     
-    Args:
-        product: The top-scoring product dict.
-        
     Returns:
-        String with 3 bullet points, or a fallback message if LLM fails.
+        (best_index, explanation, review_summary)
     """
+    products_text = ""
+    for idx, p in enumerate(top_5_products):
+        products_text += f"[{idx}] {p.get('title', 'Unknown')}\n"
+        products_text += f"    Price: ₹{p.get('price', 'N/A')} | Rating: {p.get('rating', 'N/A')}/5 "
+        products_text += f"({p.get('review_count', 0)} reviews)\n"
+        if p.get('offers'):
+            products_text += f"    Offers: {p.get('offers')}\n"
+        products_text += "\n"
+
     prompt = EXPLAIN_PROMPT_TEMPLATE.format(
-        title=product.get("title", "Unknown"),
-        price=product.get("price", "N/A"),
-        rating=product.get("rating", "N/A"),
-        review_count=product.get("review_count", 0),
-        offers=product.get("offers", "None"),
-        sponsored="Yes" if product.get("sponsored") else "No",
+        user_query=user_query,
+        products_text=products_text.strip()
     )
 
     try:
@@ -53,62 +58,76 @@ async def explain_product(product: dict) -> str:
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.3,
+                        "temperature": 0.2, # Low temperature for more deterministic JSON
                         "top_p": 0.9,
-                        "num_predict": 200,
-                        "num_ctx": 2048,
+                        "num_predict": 300,
+                        "num_ctx": 4096,
                     },
+                    "format": "json" # Ollama JSON mode
                 },
             )
             response.raise_for_status()
             data = response.json()
-            explanation = data.get("response", "").strip()
+            response_text = data.get("response", "").strip()
 
-            if explanation:
-                logger.info("LLM explanation generated successfully")
-                return explanation
-            else:
-                logger.warning("LLM returned empty response")
-                return _fallback_explanation(product)
+            try:
+                result = json.loads(response_text)
+                best_index = int(result.get("best_index", 0))
+                explanation = result.get("explanation", "").strip()
+                review_summary = result.get("review_summary", "").strip()
+                
+                # Bounds check
+                if best_index < 0 or best_index >= len(top_5_products):
+                    best_index = 0
+                
+                if explanation and review_summary:
+                    logger.info(f"LLM expertly selected index {best_index} for query '{user_query}'")
+                    return best_index, explanation, review_summary
+                
+            except json.JSONDecodeError:
+                logger.error(f"LLM returned invalid JSON: {response_text}")
+                pass
 
     except httpx.ConnectError:
         logger.error("Cannot connect to Ollama. Is it running? (ollama serve)")
-        return _fallback_explanation(product)
     except Exception as e:
         logger.error(f"LLM explanation error: {e}")
-        return _fallback_explanation(product)
+
+    # Fallback if LLM fails
+    return 0, _fallback_explanation(top_5_products[0], user_query), _fallback_review_summary(top_5_products[0])
 
 
-def _fallback_explanation(product: dict) -> str:
+def _fallback_explanation(product: dict, query: str) -> str:
     """Generate a rule-based explanation when LLM is unavailable."""
     lines = []
-
-    rating = product.get("rating")
-    if rating and rating >= 4.0:
-        lines.append(f"• Highly rated at {rating}/5 stars by verified buyers.")
-    elif rating:
-        lines.append(f"• Rated {rating}/5 stars — decent for its price range.")
-    else:
-        lines.append("• Rating data unavailable, but selected on overall value.")
-
-    review_count = product.get("review_count", 0)
-    if review_count > 1000:
-        lines.append(f"• Backed by {review_count:,} reviews — a popular, well-tested choice.")
-    elif review_count > 100:
-        lines.append(f"• Has {review_count:,} reviews — enough social proof for confidence.")
-    else:
-        lines.append("• Fewer reviews, but scored well on price-to-quality ratio.")
-
+    lines.append(f"• Selected based on overall deterministic scoring for '{query}'.")
+    
     price = product.get("price")
     offers = product.get("offers", "")
     if price and offers:
-        lines.append(f"• Priced at ₹{price:,.0f} with active offers — strong value for money.")
+        lines.append(f"• Priced at ₹{price:,.0f} with active offers — strong value.")
     elif price:
         lines.append(f"• Priced at ₹{price:,.0f} — competitive in its category.")
-    else:
-        lines.append("• Good overall value relative to alternatives analyzed.")
 
-    return "\n".join(lines)
+    if product.get("rating") and product.get("rating") >= 4.0:
+        lines.append(f"• Highly rated at {product.get('rating')}/5 stars.")
+    else:
+        lines.append("• Represents the best balanced choice in the top results.")
+
+    return "\n".join(lines[:3])
+
+
+def _fallback_review_summary(product: dict) -> str:
+    rating = product.get("rating")
+    reviews = product.get("review_count", 0)
+    
+    if rating and rating >= 4.5 and reviews > 500:
+        return "Reviews overwhelmingly praise this product for its top-tier quality and reliability."
+    elif rating and rating >= 4.0:
+        return "Generally positive reviews, indicating good satisfaction among most buyers."
+    elif rating and reviews > 0:
+        return "Reviews indicate a mixed but generally acceptable reception."
+    return "Not enough detailed review data available to form a strong consensus."
 
 
 async def check_ollama_health() -> bool:

@@ -70,7 +70,7 @@
           </select>
         </div>
         <div class="control-item">
-          <label class="control-label">Reddit check</label>
+          <label class="control-label">Background check</label>
           <label class="toggle" for="redditToggle">
             <input type="checkbox" id="redditToggle">
             <span class="toggle-slider"></span>
@@ -99,8 +99,8 @@
       <div class="loading-steps">
         <div class="step" id="stepScrape"><span class="step-dot"></span> Scraping products</div>
         <div class="step" id="stepScore"><span class="step-dot"></span> Scoring & ranking</div>
-        <div class="step" id="stepExplain"><span class="step-dot"></span> Generating explanation</div>
-        <div class="step" id="stepReddit" style="display:none;"><span class="step-dot"></span> Reddit sentiment check
+        <div class="step" id="stepExplain"><span class="step-dot"></span> Generating AI insights</div>
+        <div class="step" id="stepReddit" style="display:none;"><span class="step-dot"></span> Background checks
         </div>
       </div>
     </section>
@@ -148,6 +148,12 @@
           <div class="explanation-text" id="explanationText"></div>
         </div>
 
+        <!-- Review Summary -->
+        <div class="explanation-box">
+          <h3 class="explanation-title">📝 Review Summary</h3>
+          <div class="explanation-text" id="reviewSummaryText" style="font-style: italic;"></div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="action-row">
           <a href="#" id="viewOnFlipkart" class="action-btn primary-btn" target="_blank" rel="noopener">
@@ -177,6 +183,25 @@
           <div class="sentiment-col">
             <h4 class="col-title complaint-title">👎 Common Complaints</h4>
             <ul class="theme-list" id="complaintList"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Web Sentiment Card -->
+      <div class="sentiment-card" id="webSentimentCard" style="display:none; margin-top: 1rem;">
+        <h3 class="sentiment-title">🌐 Web Search Sentiment</h3>
+        <div class="sentiment-overview">
+          <div class="sentiment-badge" id="webSentimentBadge">Loading...</div>
+          <span class="sentiment-count" id="webSentimentCount"></span>
+        </div>
+        <div class="sentiment-details">
+          <div class="sentiment-col">
+            <h4 class="col-title praise-title">👍 Common Praise</h4>
+            <ul class="theme-list" id="webPraiseList"></ul>
+          </div>
+          <div class="sentiment-col">
+            <h4 class="col-title complaint-title">👎 Common Complaints</h4>
+            <ul class="theme-list" id="webComplaintList"></ul>
           </div>
         </div>
       </div>
