@@ -2,7 +2,15 @@
 
 > **Note: This project is currently in the active development phase. We are continuously pushing updates and expanding support for various e-commerce platforms.**
 
-Find the **single best product** across e-commerce platforms using deterministic scoring, local AI explanations, and sentiment analysis. Runs **100% locally** with zero paid APIs.
+Find the **single best product** across e-commerce platforms using deterministic scoring, AI explanations, and sentiment analysis. Requires **zero technical knowledge**—just speak naturally. Runs blazingly fast on the **Cloud** to save device power, with a strict **100% Local Fallback option** for absolute privacy.
+
+---
+
+## 🌌 The Interface (New!)
+ClarityCart features a stunning, premium **anti-gravity dark mode UI**. It mimics a 2035 AI operating system complete with:
+- Animated SVG wave & particle backgrounds
+- Glassmorphism frosted panels
+- Glowing neon accents & magnetic micro-interactions
 
 ---
 
@@ -10,13 +18,24 @@ Find the **single best product** across e-commerce platforms using deterministic
 
 | Feature | Description |
 |---------|-------------|
-| 🔍 **Smart Search** | Natural language input — just type what you are looking for. |
-| 🌐 **Universal Architecture** | Extensible scraping workers designed to support any e-commerce site. |
+| 🔍 **Zero-Tech Search** | Natural language input — just type what you need (e.g., "laptop for my mom"), no specs needed! |
+| 🌐 **Universal Architecture** | Extensible scraping workers designed to support any e-commerce site (Amazon, Flipkart, Myntra, etc.). |
 | ⚡ **Deterministic Scoring** | Advanced weighted formula considering ratings, reviews, price, and offers. |
 | 🏷️ **Sponsored Penalization** | Automatically detects and penalizes sponsored or promoted listings to prioritize organic results. |
-| 🤖 **AI Explanation** | Local LLM (e.g., DeepSeek, Phi-3 via Ollama/llama.cpp) explains "Why this product?" without relying on cloud APIs. |
-| 📊 **Sentiment Analysis** | Background checks using real user discussions from forums like Reddit. |
-| 🔒 **100% Local & Private** | Everything runs on your machine. No data leaves your system. |
+| 🤖 **AI Explanation** | Explains exactly "Why this product?" based on your specific lifestyle needs. |
+| 📊 **Deep Background Checks** | Scrapes real user discussions from forums like Reddit and Twitter to find long-term flaws. |
+| 🛒 **Autonomous Order Agent** | The AI can physically click "Add to Cart" and navigate the checkout flow for you. |
+| ☁️ **Cloud + Local Flexibility** | Balances resource efficiency (Cloud) with absolute data privacy (Local/llama.cpp). |
+
+---
+
+## 🔮 Future Roadmap
+
+- 📸 **Visual / Image Search:** Upload a picture of an item to automatically scan the web and find the exact or closest match.
+- 🎙️ **Voice Mode:** Completely hands-free operation: *"Clarity, find me those blue shoes I liked yesterday."*
+- 📉 **Price Tracking & Prediction:** AI-driven advice on exactly *when* to buy for the lowest price.
+- 🎟️ **Auto-Coupons:** Automatically scraping and applying promo codes during the agentic checkout phase.
+- 🛍️ **Multi-Site Battle:** Scanning Amazon, Flipkart, and local retailers simultaneously to find the lowest price across the internet.
 
 ---
 
