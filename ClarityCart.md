@@ -143,4 +143,5 @@ To keep the project evolving, the following features are planned for future upda
 5. **Multi-Site Comparison:** Instead of just scraping the site you are currently on, a future update will allow the AI to silently check the exact same product on Amazon, Flipkart, and local retailers simultaneously to find the absolute lowest price on the internet.
 6. **YouTube Transcript Analysis:** Instead of just checking Reddit and Twitter, the AI will pull the subtitles/transcripts from the top 3 YouTube video reviews of the product and summarize the video creators' opinions.
 
+Author 1 - Anish Sinha
 Author 2 - Poonam
